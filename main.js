@@ -2,11 +2,19 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
+import { RectAreaLightHelper } from 'three/examples/jsm/helpers/RectAreaLightHelper.js';
+import { RectAreaLightUniformsLib } from 'three/examples/jsm/lights/RectAreaLightUniformsLib.js';
 
 // 场景设置
 const scene = new THREE.Scene();
+
+
+// 创建透视摄像机
+// 参数: 视野角度(FOV), 宽高比, 近裁剪面, 远裁剪面
 let camera = new THREE.PerspectiveCamera(17.06, window.innerWidth / window.innerHeight, 0.1, 1000);
+// 设置摄像机位置 (x, y, z)
 camera.position.set(0, -15.7, 177.04);
+// 设置摄像机旋转角度 (x, y, z) 单位:弧度
 camera.rotation.set(0.0976, 0, 0);
 
 const renderer = new THREE.WebGLRenderer();
@@ -16,6 +24,7 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 renderer.shadowMap.enabled = true;  // 启用阴影
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;  // 使用柔和阴影
+renderer.physicallyCorrectLights = true;  // 使用物理正确的光照计算
 document.body.appendChild(renderer.domElement);
 
 // 加载环境贴图
@@ -31,18 +40,42 @@ new EXRLoader().load('peppermint-powerplant-2_2K_2776bb05-fdf5-4fa2-8ae0-bw.exr'
     
     // 应用贴图
     scene.environment = envMap;  // 保留环境反射
-    scene.background = new THREE.Color(0xFFDB00);  // 设置黄色背景
+    // scene.background = new THREE.Color(0xFFDB00);  // 设置黄色背景
     
     // 清理
     pmremGenerator.dispose();
     texture.dispose();
 });
 
+// 创建平行光来模拟区域光
+const areaLight = new THREE.DirectionalLight(0xFFEB90, 2);
+areaLight.position.set(-25, 25, 20);
+areaLight.rotation.set(THREE.MathUtils.degToRad(-27.142), THREE.MathUtils.degToRad(-57.006), THREE.MathUtils.degToRad(66.817));
+
+// 设置阴影参数
+areaLight.castShadow = true;
+areaLight.shadow.radius = 8; 
+areaLight.shadow.mapSize.width = 2048;
+areaLight.shadow.mapSize.height = 2048;
+areaLight.shadow.camera.near = 0.1;
+areaLight.shadow.camera.far = 100;
+areaLight.shadow.camera.left = -20;
+areaLight.shadow.camera.right = 20;
+areaLight.shadow.camera.top = 20;
+areaLight.shadow.camera.bottom = -20; // 显著增加阴影的模糊度
+areaLight.shadow.bias = -0.001;  // 减少阴影失真
+
+scene.add(areaLight);
+
+// 添加辅助线
+const lightHelper = new THREE.DirectionalLightHelper(areaLight, 10);
+scene.add(lightHelper);
+
 // 控制器设置
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.minDistance = 10;  // 最小距离
-controls.maxDistance = 200; // 最大距离
+controls.minDistance = 50;  // 最小距离
+controls.maxDistance = 500; // 最大距离
 
 // 变量声明
 let mixer = null;
@@ -123,7 +156,7 @@ loader.load(
                     child.intensity = 10;
                     child.castShadow = true;
                     child.receiveShadow = true;
-                    child.shadow.radius = 10;
+                    child.shadow.radius = 1;
                     child.shadow.mapSize.set(2048, 2048);
                     child.shadow.camera.near = 0.1;
                     child.shadow.camera.far = 50;
@@ -136,7 +169,7 @@ loader.load(
                     child.intensity = 5;
                     child.castShadow = true;
                     child.receiveShadow = true;
-                    child.shadow.radius = 1;
+                    child.shadow.radius = 0.5;
                     child.shadow.mapSize.set(2048, 2048);
                     child.shadow.camera.near = 0.1;
                     child.shadow.camera.far = 50;
@@ -188,6 +221,9 @@ loader.load(
                 renderer.setSize(width, height);
                 renderer.domElement.style.margin = 'auto';
                 renderer.domElement.style.display = 'block';
+                // 更新控制器的相机引用
+                controls.object = camera;
+                controls.update();
             }
         });
 
