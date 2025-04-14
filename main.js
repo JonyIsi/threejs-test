@@ -21,7 +21,7 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 1.2;
 renderer.shadowMap.enabled = true;  // 启用阴影
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;  // 使用柔和阴影
 renderer.physicallyCorrectLights = true;  // 使用物理正确的光照计算
@@ -40,35 +40,43 @@ new EXRLoader().load('peppermint-powerplant-2_2K_2776bb05-fdf5-4fa2-8ae0-bw.exr'
     
     // 应用贴图
     scene.environment = envMap;  // 保留环境反射
-    // scene.background = new THREE.Color(0xFFDB00);  // 设置黄色背景
+    scene.background = new THREE.Color(0xFFDB00);  // 设置黄色背景
     
     // 清理
     pmremGenerator.dispose();
     texture.dispose();
 });
 
-// 创建平行光来模拟区域光
-const areaLight = new THREE.DirectionalLight(0xFFEB90, 2);
-areaLight.position.set(-25, 25, 20);
-areaLight.rotation.set(THREE.MathUtils.degToRad(-27.142), THREE.MathUtils.degToRad(-57.006), THREE.MathUtils.degToRad(66.817));
+// 创建点光源
+const areaLight = new THREE.PointLight(0xFFFFFF, 60, 300, 1.5);  // 颜色, 强度, 距离, 衰减
+areaLight.position.set(-60, 60, 30);
 
 // 设置阴影参数
 areaLight.castShadow = true;
-areaLight.shadow.radius = 8; 
-areaLight.shadow.mapSize.width = 2048;
-areaLight.shadow.mapSize.height = 2048;
-areaLight.shadow.camera.near = 0.1;
-areaLight.shadow.camera.far = 100;
-areaLight.shadow.camera.left = -20;
-areaLight.shadow.camera.right = 20;
-areaLight.shadow.camera.top = 20;
-areaLight.shadow.camera.bottom = -20; // 显著增加阴影的模糊度
-areaLight.shadow.bias = -0.001;  // 减少阴影失真
+areaLight.shadow.radius = 20;  // 增加阴影模糊度
+areaLight.shadow.mapSize.set(40000, 40000);
+areaLight.shadow.camera.near = 1;
+areaLight.shadow.camera.far = 300;
+areaLight.shadow.bias = -0.002;  // 调整阴影偏移
+// areaLight.shadow.normalBias = 0.05;  // 添加法线偏移以减少阴影伪影
 
 scene.add(areaLight);
 
+// 创建第二个点光源（底部补光）
+const bottomLight = new THREE.PointLight(0xFFD53F, 10, 200, 1.5);  // 颜色, 强度, 距离, 衰减
+bottomLight.position.set(-60, 0, 30);  // 在主光源下方
+
+// 设置阴影参数
+bottomLight.castShadow = false;
+
+scene.add(bottomLight);
+
 // 添加辅助线
-const lightHelper = new THREE.DirectionalLightHelper(areaLight, 10);
+const bottomLightHelper = new THREE.PointLightHelper(bottomLight, 10);
+scene.add(bottomLightHelper);
+
+// 添加辅助线
+const lightHelper = new THREE.PointLightHelper(areaLight, 10);
 scene.add(lightHelper);
 
 // 控制器设置
@@ -112,13 +120,13 @@ loader.load(
                     if (Array.isArray(child.material)) {
                         child.material.forEach(mat => {
                             if (mat.color) {
-                                mat.color.setHex(0xF3DD76);
+                                mat.color.setHex(0xFFD53F);
                                 console.log('更新材质颜色(多材质):', child.name);
                             }
                         });
                     } else {
                         if (child.material.color) {
-                            child.material.color.setHex(0xF3DD76);
+                            child.material.color.setHex(0xFFD53F);
                             console.log('更新材质颜色:', child.name);
                         }
                     }
@@ -156,7 +164,9 @@ loader.load(
                     child.intensity = 10;
                     child.castShadow = true;
                     child.receiveShadow = true;
-                    child.shadow.radius = 1;
+                    child.shadow.radius = 12;  // 增加阴影柔和度
+                    child.shadow.normalBias = 0.02;
+                    // child.shadow.normalBias = 0.05; 
                     child.shadow.mapSize.set(2048, 2048);
                     child.shadow.camera.near = 0.1;
                     child.shadow.camera.far = 50;
@@ -166,10 +176,12 @@ loader.load(
                     child.shadow.camera.bottom = -50;
                     console.log('调整日光001强度为:', child.intensity);
                 } else if (child.name === '日光002') {
-                    child.intensity = 5;
+                    child.intensity = 4;
                     child.castShadow = true;
                     child.receiveShadow = true;
-                    child.shadow.radius = 0.5;
+                    child.shadow.radius = 6;  // 增加阴影柔和度
+                    child.shadow.normalBias = 0.02;
+                    // child.shadow.normalBias = 0.05; 
                     child.shadow.mapSize.set(2048, 2048);
                     child.shadow.camera.near = 0.1;
                     child.shadow.camera.far = 50;
@@ -177,6 +189,7 @@ loader.load(
                     child.shadow.camera.right = 50;
                     child.shadow.camera.top = 50;
                     child.shadow.camera.bottom = -50;
+                    child.color.setHex(0xFFE37B);
                     console.log('调整日光002强度为:', child.intensity);
                 }
             }
