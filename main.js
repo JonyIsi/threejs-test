@@ -1,0 +1,207 @@
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { EXRLoader } from 'three/examples/jsm/loaders/EXRLoader.js';
+
+// 场景设置
+const scene = new THREE.Scene();
+let camera = new THREE.PerspectiveCamera(17.06, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, -15.7, 177.04);
+camera.rotation.set(0.0976, 0, 0);
+
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+renderer.shadowMap.enabled = true;  // 启用阴影
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;  // 使用柔和阴影
+document.body.appendChild(renderer.domElement);
+
+// 加载环境贴图
+new EXRLoader().load('peppermint-powerplant-2_2K_2776bb05-fdf5-4fa2-8ae0-bw.exr', function(texture) {
+    texture.mapping = THREE.EquirectangularReflectionMapping;
+    
+    // 创建PMREMGenerator来处理HDR贴图
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    
+    const renderTarget = pmremGenerator.fromEquirectangular(texture);
+    const envMap = renderTarget.texture;
+    
+    // 应用贴图
+    scene.environment = envMap;
+    scene.background = envMap;
+    
+    // 清理
+    pmremGenerator.dispose();
+    texture.dispose();
+});
+
+// 控制器设置
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minDistance = 10;  // 最小距离
+controls.maxDistance = 200; // 最大距离
+
+// 变量声明
+let mixer = null;
+let modelCamera = null;
+let modelLights = [];  // 存储模型中的灯光
+
+// 加载GLB模型
+const loader = new GLTFLoader();
+loader.load(
+    '币运动_精简_烘焙2.glb',
+    (gltf) => {
+        scene.add(gltf.scene);
+        
+        // 设置动画
+        if (gltf.animations && gltf.animations.length) {
+            mixer = new THREE.AnimationMixer(gltf.scene);
+            gltf.animations.forEach((clip) => {
+                const action = mixer.clipAction(clip);
+                action.setLoop(THREE.LoopOnce);
+                action.clampWhenFinished = true;
+                action.play();
+            });
+        }
+
+        // 为模型中的所有物体启用阴影
+        gltf.scene.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;    // 投射阴影
+                child.receiveShadow = true; // 接收阴影
+            }
+            
+            // 查找所有灯光相关的对象
+            if (child.type.includes('Light') || child instanceof THREE.Light) {
+                console.log('找到灯光:', {
+                    name: child.name,
+                    type: child.type,
+                    intensity: child.intensity,
+                    position: child.position,
+                    rotation: child.rotation,
+                    target: child.target ? {
+                        position: child.target.position,
+                        worldPosition: child.target.getWorldPosition(new THREE.Vector3())
+                    } : 'none',
+                    parent: child.parent ? child.parent.name : 'none'
+                });
+
+                // 为平行光添加辅助线
+                if (child.type === 'DirectionalLight') {
+                    
+                    const helper = new THREE.DirectionalLightHelper(child, 10);
+                    helper.name = child.name + '_helper';
+                    scene.add(helper);
+                    
+                    
+                    console.log('添加了平行光辅助线:', child.name);
+                }
+
+                // 修改灯光和阴影设置
+                if (child.name === '日光001') {
+                    child.intensity = 10;
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    child.shadow.radius = 10;
+                    child.shadow.mapSize.set(2048, 2048);
+                    child.shadow.camera.near = 0.1;
+                    child.shadow.camera.far = 50;
+                    child.shadow.camera.left = -50;
+                    child.shadow.camera.right = 50;
+                    child.shadow.camera.top = 50;
+                    child.shadow.camera.bottom = -50;
+                    console.log('调整日光001强度为:', child.intensity);
+                } else if (child.name === '日光002') {
+                    child.intensity = 5;
+                    child.castShadow = true;
+                    child.receiveShadow = true;
+                    child.shadow.radius = 1;
+                    child.shadow.mapSize.set(2048, 2048);
+                    child.shadow.camera.near = 0.1;
+                    child.shadow.camera.far = 50;
+                    child.shadow.camera.left = -50;
+                    child.shadow.camera.right = 50;
+                    child.shadow.camera.top = 50;
+                    child.shadow.camera.bottom = -50;
+                    console.log('调整日光002强度为:', child.intensity);
+                }
+            }
+            // 查找材质中的发光属性
+            if (child.material) {
+                console.log('材质信息:', {
+                    name: child.name,
+                    type: child.material.type,
+                    emissive: child.material.emissive,
+                    emissiveIntensity: child.material.emissiveIntensity
+                });
+                // 处理Logo材质
+                if (child.name === 'Logo') {  // 精确匹配Logo
+                    console.log('找到Logo材质，正在关闭发光效果');
+                    if (child.material.emissive) {
+                        child.material.emissive.setRGB(0, 0, 0);
+                    }
+                    child.material.emissiveIntensity = 0;
+                    // 确保其他相关属性也被关闭
+                    child.material.toneMapped = true;
+                    child.material.transparent = true;
+                    child.material.opacity = 1;
+                }
+            }
+            
+            if (child instanceof THREE.Camera) {
+                modelCamera = child;
+                console.log('模型摄像机信息:', {
+                    position: modelCamera.position,
+                    rotation: modelCamera.rotation,
+                    matrix: modelCamera.matrix,
+                    fov: modelCamera.fov,
+                    aspect: modelCamera.aspect,
+                    near: modelCamera.near,
+                    far: modelCamera.far
+                });
+                camera = modelCamera;
+                camera.aspect = 1;
+                camera.updateProjectionMatrix();
+                const height = window.innerHeight;
+                const width = height;
+                renderer.setSize(width, height);
+                renderer.domElement.style.margin = 'auto';
+                renderer.domElement.style.display = 'block';
+            }
+        });
+
+    },
+    undefined,
+    (error) => {
+        console.error('加载模型时发生错误:', error);
+    }
+);
+
+// 时钟用于动画更新
+const clock = new THREE.Clock();
+
+// 动画循环
+function animate() {
+    requestAnimationFrame(animate);
+    
+    // 更新动画
+    if (mixer) {
+        mixer.update(clock.getDelta());
+    }
+    
+    controls.update();
+    renderer.render(scene, camera);
+}
+animate();
+
+// 处理窗口大小变化
+window.addEventListener('resize', () => {
+    const height = window.innerHeight;
+    const width = height;  // 保持正方形
+    camera.aspect = 1;  // 保持1:1的宽高比
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height);
+}); 
