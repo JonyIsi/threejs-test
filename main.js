@@ -48,7 +48,7 @@ new EXRLoader().load('peppermint-powerplant-2_2K_2776bb05-fdf5-4fa2-8ae0-bw.exr'
 });
 
 // 创建点光源
-const areaLight = new THREE.PointLight(0xFFFFFF, 60, 300, 1.5);  // 颜色, 强度, 距离, 衰减
+const areaLight = new THREE.PointLight(0xFFFFFF, 25, 200, 1.5);  // 颜色, 强度, 距离, 衰减
 areaLight.position.set(-60, 60, 30);
 
 // 设置阴影参数
