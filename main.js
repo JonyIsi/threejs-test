@@ -30,8 +30,8 @@ new EXRLoader().load('peppermint-powerplant-2_2K_2776bb05-fdf5-4fa2-8ae0-bw.exr'
     const envMap = renderTarget.texture;
     
     // 应用贴图
-    scene.environment = envMap;
-    scene.background = envMap;
+    scene.environment = envMap;  // 保留环境反射
+    scene.background = new THREE.Color(0xFFDB00);  // 设置黄色背景
     
     // 清理
     pmremGenerator.dispose();
@@ -63,7 +63,9 @@ loader.load(
                 const action = mixer.clipAction(clip);
                 action.setLoop(THREE.LoopOnce);
                 action.clampWhenFinished = true;
-                action.play();
+                setTimeout(() => {
+                    action.play();
+                }, 2500);
             });
         }
 
@@ -72,6 +74,22 @@ loader.load(
             if (child.isMesh) {
                 child.castShadow = true;    // 投射阴影
                 child.receiveShadow = true; // 接收阴影
+                // 修改材质颜色
+                if (child.material) {
+                    if (Array.isArray(child.material)) {
+                        child.material.forEach(mat => {
+                            if (mat.color) {
+                                mat.color.setHex(0xF3DD76);
+                                console.log('更新材质颜色(多材质):', child.name);
+                            }
+                        });
+                    } else {
+                        if (child.material.color) {
+                            child.material.color.setHex(0xF3DD76);
+                            console.log('更新材质颜色:', child.name);
+                        }
+                    }
+                }
             }
             
             // 查找所有灯光相关的对象
