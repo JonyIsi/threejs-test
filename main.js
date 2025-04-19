@@ -17,7 +17,7 @@ camera.position.set(0, -15.7, 177.04);
 // 设置摄像机旋转角度 (x, y, z) 单位:弧度
 camera.rotation.set(0.0976, 0, 0);
 
-const renderer = new THREE.WebGLRenderer();
+const renderer = new THREE.WebGLRenderer({ alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -40,7 +40,7 @@ new EXRLoader().load('peppermint-powerplant-2_2K_2776bb05-fdf5-4fa2-8ae0-bw.exr'
     
     // 应用贴图
     scene.environment = envMap;  // 保留环境反射
-    scene.background = new THREE.Color(0xFFDB00);  // 设置黄色背景
+    scene.background = null;  // 设置透明背景
     
     // 清理
     pmremGenerator.dispose();
@@ -104,9 +104,7 @@ loader.load(
                 const action = mixer.clipAction(clip);
                 action.setLoop(THREE.LoopOnce);
                 action.clampWhenFinished = true;
-                setTimeout(() => {
-                    action.play();
-                }, 2500);
+                action.play();
             });
         }
 
@@ -193,27 +191,7 @@ loader.load(
                     console.log('调整日光002强度为:', child.intensity);
                 }
             }
-            // 查找材质中的发光属性
-            if (child.material) {
-                console.log('材质信息:', {
-                    name: child.name,
-                    type: child.material.type,
-                    emissive: child.material.emissive,
-                    emissiveIntensity: child.material.emissiveIntensity
-                });
-                // 处理Logo材质
-                if (child.name === 'Logo') {  // 精确匹配Logo
-                    console.log('找到Logo材质，正在关闭发光效果');
-                    if (child.material.emissive) {
-                        child.material.emissive.setRGB(0, 0, 0);
-                    }
-                    child.material.emissiveIntensity = 0;
-                    // 确保其他相关属性也被关闭
-                    child.material.toneMapped = true;
-                    child.material.transparent = true;
-                    child.material.opacity = 1;
-                }
-            }
+
             
             if (child instanceof THREE.Camera) {
                 modelCamera = child;
