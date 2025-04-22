@@ -17,15 +17,16 @@ camera.position.set(0, -15.7, 177.04);
 // 设置摄像机旋转角度 (x, y, z) 单位:弧度
 camera.rotation.set(0.0976, 0, 0);
 
-const renderer = new THREE.WebGLRenderer({ alpha: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
+const renderer = new THREE.WebGLRenderer({ alpha: false });
+renderer.setClearColor(0x000000);
+renderer.setSize(window.innerWidth, 100);
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.2;
 renderer.shadowMap.enabled = true;  // 启用阴影
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;  // 使用柔和阴影
 renderer.physicallyCorrectLights = true;  // 使用物理正确的光照计算
-document.body.appendChild(renderer.domElement);
+document.querySelector('.viewer-container').appendChild(renderer.domElement);
 
 // 加载环境贴图
 new EXRLoader().load('peppermint-powerplant-2_2K_2776bb05-fdf5-4fa2-8ae0-bw.exr', function(texture) {
@@ -207,9 +208,8 @@ loader.load(
                 camera = modelCamera;
                 camera.aspect = 1;
                 camera.updateProjectionMatrix();
-                const height = window.innerHeight;
-                const width = height;
-                renderer.setSize(width, height);
+                const size = 600; // 使用相同的宽高
+                renderer.setSize(size, size);
                 renderer.domElement.style.margin = 'auto';
                 renderer.domElement.style.display = 'block';
                 // 更新控制器的相机引用
@@ -244,9 +244,8 @@ animate();
 
 // 处理窗口大小变化
 window.addEventListener('resize', () => {
-    const height = window.innerHeight;
-    const width = height;  // 保持正方形
-    camera.aspect = 1;  // 保持1:1的宽高比
+    const size = 600; // 使用相同的宽高
+    camera.aspect = 1;
     camera.updateProjectionMatrix();
-    renderer.setSize(width, height);
+    renderer.setSize(size, size);
 }); 
