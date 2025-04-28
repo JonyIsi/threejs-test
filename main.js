@@ -94,8 +94,24 @@ let modelLights = [];  // 存储模型中的灯光
 // 加载GLB模型
 const loader = new GLTFLoader();
 loader.load(
-    '币运动_精简_烘焙2.glb',
+    'icon-model.glb',
     (gltf) => {
+        // // 设置贴图色彩空间
+        // gltf.scene.traverse((node) => {
+        //     if (node.isMesh && node.material) {
+        //         const materials = Array.isArray(node.material) ? node.material : [node.material];
+        //         materials.forEach(material => {
+        //             if (material.map && material.map.name === '20250428-164304.jpeg') {
+        //                 console.log('找到贴图:', material.map);
+        //                 material.map.encoding = THREE.LinearEncoding;
+        //                 material.map.colorSpace = THREE.SRGBColorSpace;
+        //                 material.map.needsUpdate = true;
+        //                 material.needsUpdate = true;
+        //             }
+        //         });
+        //     }
+        // });
+
         scene.add(gltf.scene);
         
         // 设置动画
@@ -114,22 +130,6 @@ loader.load(
             if (child.isMesh) {
                 child.castShadow = true;    // 投射阴影
                 child.receiveShadow = true; // 接收阴影
-                // 修改材质颜色
-                if (child.material) {
-                    if (Array.isArray(child.material)) {
-                        child.material.forEach(mat => {
-                            if (mat.color) {
-                                mat.color.setHex(0xFFD53F);
-                                console.log('更新材质颜色(多材质):', child.name);
-                            }
-                        });
-                    } else {
-                        if (child.material.color) {
-                            child.material.color.setHex(0xFFD53F);
-                            console.log('更新材质颜色:', child.name);
-                        }
-                    }
-                }
             }
             
             // 查找所有灯光相关的对象
